@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>เกมทำนายดวงจันทร์</title>
+
+<style>
+body {
+  background:#0b1d3a;
+  color:white;
+  font-family:Prompt, sans-serif;
+  text-align:center;
+  margin:0;
+}
+
+.screen { display:none; padding:20px; }
+.active { display:block; }
+.name-input {
+  font-size: 18px;
+  padding: 12px 15px;
+  border-radius: 15px;   /* 👈 ขอบมน */
+  border: none;
+  outline: none;
+  width: 220px;
+  text-align: center;
+}
+.praise-img {
+  width: 180px;
+  margin: 15px auto;
+  display: block;
+  border-radius: 20px;
+}
+button {
+  border:none;
+  border-radius:12px;
+  padding:15px;
+  margin:10px;
+  font-size:22px;
+  cursor:pointer;
+}
+
+.moon-btn {
+  font-size:38px;
+  width:90px;
+  height:90px;
+  background:#1e3c72;
+  color:white;
+}
+
+.moon-btn:disabled {
+  cursor:not-allowed;
+  opacity:0.9;
+}
+
+.correct-btn { background:#2ecc71 !important; }
+.wrong-btn { background:#e74c3c !important; }
+
+.correct { color:#7CFC00; font-size:22px; }
+.wrong { color:#ff6b6b; font-size:22px; }
+
+.block {
+  background:#13294b;
+  border-radius:15px;
+  padding:20px;
+  margin:15px auto;
+  max-width:420px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- หน้าเริ่ม -->
+<div id="start" class="screen active">
+  <img src="https://i.ibb.co/4R5kQPB6/1000034850-removebg-preview.png">
+  <h1> เกมทำนายดวงจันทร์</h1>
+  <input id="name" class="name-input" placeholder="ชื่อของคุณ">
+  <br><br>
+  <button onclick="startGame()">เริ่มเกม</button>
+</div>
+
+<!-- หน้าเกม -->
+<div id="game" class="screen">
+  <h3 id="player"></h3>
+  <p>รอบ <span id="round"></span> / 10 | คะแนน <span id="score"></span></p>
+
+  <div class="block">
+    <div style="font-size:60px" id="todayIcon"></div>
+    <p id="todayText"></p>
+    <h3 id="question"></h3>
+  </div>
+
+  <div class="block">
+    <h3>เลือกคำตอบ</h3>
+    <div id="answers"></div>
+  </div>
+
+  <p id="result"></p>
+
+  <button id="solutionBtn" onclick="showSolution()" style="display:none">เฉลย</button>
+  <button id="nextBtn" onclick="nextRound()" style="display:none">ไปต่อ</button>
+</div>
+
+<!-- หน้าสรุป -->
+<div id="end" class="screen">
+  <h1>🎉 สรุปผลการเล่น</h1>
+  <h2 id="summaryName"></h2>
+  <p id="finalScore"></p>
+  <h2 id="praise"></h2>
+
+  <!-- 👇 เพิ่มรูปตรงนี้ -->
+  <img id="praiseImg" class="praise-img" style="display:none">
+
+  <button onclick="location.reload()">เล่นใหม่</button>
+</div>
+
+<script>
+const phases = [
+  "ขึ้น 4 ค่ำ","ขึ้น 8 ค่ำ","ขึ้น 11 ค่ำ","ขึ้น 15 ค่ำ",
+  "แรม 4 ค่ำ","แรม 8 ค่ำ","แรม 11 ค่ำ","แรม 15 ค่ำ"
+];
+
+const icons = ["🌒","🌓","🌔","🌕","🌖","🌗","🌘","🌑"];
+
+const dayToStep = {4:1, 8:2, 11:3, 15:4};
+const days = [4,8,11,15];
+
+const MAX_ROUNDS = 10;
+
+let round = 0, score = 0;
+let today = 0, answer = 0;
+let answered = false;
+let playerName = "";
+
+function startGame(){
+  playerName = document.getElementById("name").value || "นักเรียน";
+  document.getElementById("player").innerText = "ผู้เล่น: " + playerName;
+  document.getElementById("start").classList.remove("active");
+  document.getElementById("game").classList.add("active");
+  nextRound();
+}
+
+function nextRound(){
+  if(round >= MAX_ROUNDS){
+    endGame(); return;
+  }
+
+  round++;
+  answered = false;
+
+  document.getElementById("round").innerText = round;
+  document.getElementById("score").innerText = score;
+  document.getElementById("result").innerText = "";
+  document.getElementById("solutionBtn").style.display="none";
+  document.getElementById("nextBtn").style.display="none";
+
+  today = Math.floor(Math.random()*8);
+  const day = days[Math.floor(Math.random()*days.length)];
+  const step = dayToStep[day];
+  answer = (today + step) % 8;
+
+  document.getElementById("todayIcon").innerText = icons[today];
+  document.getElementById("todayText").innerText = "วันนี้: " + phases[today];
+  document.getElementById("question").innerText =
+    `อีก ${day} วัน ดวงจันทร์จะเป็นอย่างไร?`;
+
+  let choices = [answer];
+  while(choices.length < 4){
+    const r = Math.floor(Math.random()*8);
+    if(!choices.includes(r)) choices.push(r);
+  }
+  choices.sort(()=>Math.random()-0.5);
+
+  const box = document.getElementById("answers");
+  box.innerHTML = "";
+
+  choices.forEach(i=>{
+    const btn = document.createElement("button");
+    btn.className="moon-btn";
+    btn.innerText=icons[i];
+    btn.dataset.index = i;
+    btn.onclick=()=>check(i, btn);
+    box.appendChild(btn);
+  });
+}
+
+function check(i, btn){
+  if(answered) return;
+  answered = true;
+
+  document.querySelectorAll(".moon-btn").forEach(b=>b.disabled=true);
+
+  if(i === answer){
+    score++;
+    btn.classList.add("correct-btn");
+    document.getElementById("result").innerHTML =
+      `<span class="correct">✔ ถูกต้อง</span>`;
+  } else {
+    btn.classList.add("wrong-btn");
+    document.getElementById("result").innerHTML =
+      `<span class="wrong">✘ ยังไม่ถูก</span>`;
+  }
+
+  document.getElementById("score").innerText = score;
+  document.getElementById("solutionBtn").style.display="inline-block";
+  document.getElementById("nextBtn").style.display="inline-block";
+}
+
+function showSolution(){
+  document.querySelectorAll(".moon-btn").forEach(btn=>{
+    if(parseInt(btn.dataset.index) === answer){
+      btn.classList.add("correct-btn");
+    }
+  });
+
+  document.getElementById("result").innerHTML +=
+    `<br>เฉลย: ${phases[answer]} ${icons[answer]}`;
+}
+
+function endGame(){
+  document.getElementById("game").classList.remove("active");
+  document.getElementById("end").classList.add("active");
+
+  document.getElementById("summaryName").innerText =
+    `ผู้เล่น: ${playerName}`;
+  document.getElementById("finalScore").innerText =
+    `คะแนน ${score} จาก ${MAX_ROUNDS}`;
+
+  let praiseText = "";
+  let praiseImage = "";
+
+  if(score <= 3){
+    praiseText = " ไปเรียนมาใหม่ ท่านแพ้เด็ก ป.4 ได้เยี่ยงไร";
+    praiseImage = "https://i.ibb.co/zhJWyWTY/1766520091352.png";
+  } else if(score <= 7){
+    praiseText =  "อาจารย์ว่ามันดีได้กว่านี้อีกนะ";
+    praiseImage = "https://i.ibb.co/dsQVqzHz/1766522777701.png";
+  } else {
+    praiseText = " เฮ็ดดีๆ!!!!";
+    praiseImage = "https://i.ibb.co/CKs59x3k/1766522479240.png";
+  }
+
+  document.getElementById("praise").innerText = praiseText;
+
+  const img = document.getElementById("praiseImg");
+  img.src = praiseImage;
+  img.style.display = "block";
+}
+</script>
+
+</body>
+</html>
